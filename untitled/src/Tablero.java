@@ -1,6 +1,5 @@
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.util.TreeMap;
 
 public class Tablero {
     private int tam;
@@ -8,7 +7,6 @@ public class Tablero {
     private ArrayList<ArrayList<Integer>> posiciones;
     private ArrayList<Agente> agentes;
     private ArrayList<Telefono> telefonos;
-
 
     public Tablero(int tam) {
         this.tam = tam;
@@ -19,52 +17,130 @@ public class Tablero {
     }
 
     private void iniciarTablero(int tam) {
-        System.out.println("Iniciando el tablero, va a tener un tamaño de: "+ tam +"x"+ tam);
+        System.out.println("Iniciando el tablero, va a tener un tamaño de: " + tam + "x" + tam);
         IniciarMatriz(tam);
         preNeo(tam);
         preTel(tam);
         preAgen(tam);
         iniciarPartida();
-
     }
 
     private void IniciarMatriz(int tam) {
-        for(int i = 0; i < tam; i++){
+        for (int i = 0; i < tam; i++) {
             ArrayList<Integer> columna = new ArrayList<>();
-            for(int j = 0; j < tam; j++){
+            for (int j = 0; j < tam; j++) {
                 columna.add(-1);
             }
             posiciones.add(columna);
         }
     }
 
-    public ArrayList<Agente>  getAgentes() {
+    public ArrayList<Agente> getAgentes() {
         return agentes;
     }
 
-    public Telefono getTelefonos(int i) {
-        return getTelefonos().get(i);
+    public Telefono getTelefono(int i) {
+        return telefonos.get(i);
     }
 
     public Agente getAgente(int i) {
-        return getAgentes().get(i);
+        return agentes.get(i);
     }
 
     public ArrayList<Telefono> getTelefonos() {
         return telefonos;
     }
 
+    public int getTam() {
+        return tam;
+    }
+
+    public Neo getNeo() {
+        return neo;
+    }
 
     public boolean verificarPos(int tam, int col, int row) {
-        if(tam<=col || tam<=row){
+        if (tam <= col || tam <= row) {
             return false;
         }
-        if(posiciones.get(row).get(col)==-1){
-            return true;
+        return posiciones.get(row).get(col) == -1;
+    }
+
+    public synchronized void moverAgentes() {
+        System.out.println("Moviendo agentes... Neo está en (" + neo.getCol() + "," + neo.getRow() + ")");
+
+        for (Agente agente : agentes) {
+            System.out.println("Agente en (" + agente.getCol() + "," + agente.getRow() + ")");
+
+            if (!agente.isWon() && neo.stillAlive() && !fullTelefono()) {
+                int direccion = agente.analizar(neo.getCol(), neo.getRow());
+                System.out.println("Dirección calculada: " + direccion);
+
+                if (direccion != -1) {
+                    moverAgente(agente, direccion);
+                }
+            }
         }
-        else{
-            return false;
+    }
+
+
+    private synchronized void moverAgente(Agente agente, int direccion) {
+        int col = agente.getCol();
+        int row = agente.getRow();
+        int nuevaCol = col;
+        int nuevaRow = row;
+
+        switch (direccion) {
+            case 0:
+                if (row > 0 && (posiciones.get(row - 1).get(col) == -1 ||
+                        (row - 1 == neo.getRow() && col == neo.getCol()))) {
+                    nuevaRow = row - 1;
+                }
+                break;
+            case 1:
+                if (row < tam - 1 && (posiciones.get(row + 1).get(col) == -1 ||
+                        (row + 1 == neo.getRow() && col == neo.getCol()))) {
+                    nuevaRow = row + 1;
+                }
+                break;
+            case 2:
+                if (col > 0 && (posiciones.get(row).get(col - 1) == -1 ||
+                        (row == neo.getRow() && col - 1 == neo.getCol()))) {
+                    nuevaCol = col - 1;
+                }
+                break;
+            case 3:
+                if (col < tam - 1 && (posiciones.get(row).get(col + 1) == -1 ||
+                        (row == neo.getRow() && col + 1 == neo.getCol()))) {
+                    nuevaCol = col + 1;
+                }
+                break;
         }
+
+        if ((nuevaCol != col || nuevaRow != row)) {
+            int valorNuevaPos = posiciones.get(nuevaRow).get(nuevaCol);
+
+            posiciones.get(row).set(col, -1);
+
+            posiciones.get(nuevaRow).set(nuevaCol, 1);
+
+            agente.setPosicion(nuevaCol, nuevaRow);
+
+            System.out.println("Agente movido de (" + col + "," + row + ") a (" + nuevaCol + "," + nuevaRow + ")");
+
+            if (nuevaCol == neo.getCol() && nuevaRow == neo.getRow()) {
+                agente.setWon(true);
+                neo.kill();
+                System.out.println("¡Agente atrapó a Neo!");
+            }
+        }
+    }
+
+    public int getValorCasilla(int row, int col) {
+        if (row >= 0 && row < tam && col >= 0 && col < tam) {
+            return posiciones.get(row).get(col);
+        }
+        return -2;
     }
 
     public void preTel(int tam) {
@@ -72,8 +148,8 @@ public class Tablero {
         int maxIntentos = tam * tam * 2;
 
         while (telefonosColocados < 4 && maxIntentos > 0) {
-            int c = (int)(Math.random() * tam);
-            int r = (int)(Math.random() * tam);
+            int c = (int) (Math.random() * tam);
+            int r = (int) (Math.random() * tam);
 
             if (verificarPos(tam, c, r)) {
                 Telefono telefono = new Telefono(c, r);
@@ -89,14 +165,13 @@ public class Tablero {
         }
     }
 
-
     public void preAgen(int tam) {
         int agentesColocados = 0;
         int maxIntentos = tam * tam * 2;
 
         while (agentesColocados < 2 && maxIntentos > 0) {
-            int c = (int)(Math.random() * tam);
-            int r = (int)(Math.random() * tam);
+            int c = (int) (Math.random() * tam);
+            int r = (int) (Math.random() * tam);
 
             if (verificarPos(tam, c, r)) {
                 Agente agente = new Agente(c, r);
@@ -112,16 +187,16 @@ public class Tablero {
         }
     }
 
-    public void preNeo(int tam){
+    public void preNeo(int tam) {
         int cantNeo = 0;
-        while (cantNeo<1){
-            int c = (int)(Math.random() * tam);
-            int r = (int)(Math.random() * tam);
+        while (cantNeo < 1) {
+            int c = (int) (Math.random() * tam);
+            int r = (int) (Math.random() * tam);
             if (verificarPos(tam, c, r)) {
-                Neo neo = new Neo(c,r);
+                Neo neo = new Neo(c, r);
                 this.neo = neo;
-                posiciones.get(r).set(c,0);
-                System.out.println("Neo esta en la posición: "+ c + "," + r);
+                posiciones.get(r).set(c, 0);
+                System.out.println("Neo esta en la posición: " + c + "," + r);
                 cantNeo++;
             }
         }
@@ -130,24 +205,24 @@ public class Tablero {
     public void mostrarMatriz(int tam) {
         for (int row = 0; row < tam; row++) {
             for (int col = 0; col < tam; col++) {
-                System.out.print(" "+ posiciones.get(col).get(row) + " ");
+                System.out.print(" " + posiciones.get(row).get(col) + " ");
             }
-            System.out.println(" ");
+            System.out.println();
         }
     }
 
-    public boolean fullTelefono(){
-        for (int i = 0; i<telefonos.size(); i++){
-            if(telefonos.get(i).isFull()){
+    public boolean fullTelefono() {
+        for (int i = 0; i < telefonos.size(); i++) {
+            if (telefonos.get(i).isFull()) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean agenteHasWon(){
-        for (int i = 0; i<agentes.size(); i++){
-            if(agentes.get(i).isWon()){
+    public boolean agenteHasWon() {
+        for (int i = 0; i < agentes.size(); i++) {
+            if (agentes.get(i).isWon()) {
                 return true;
             }
         }
@@ -157,64 +232,120 @@ public class Tablero {
     public void cambiarPos(int c, int r, int d, boolean isNeo) {
         if (isNeo) {
             if (d == 0) {
-                if (r > 0 && posiciones.get(r - 1).get(c) == -1) {
-                    neo.moveUp(c, r);
-                    posiciones.get(r).set(c, -1);
-                    posiciones.get(r).set(c-1, 0);
-                    System.out.println("Moviendo hacia arriba");
-                    for (int i = 0; i < agentes.size(); i++) {
-                        getAgente(i).analizar(c, r);
+                if (r > 0) {
+                    if (posiciones.get(r - 1).get(c) == -1) {
+                        posiciones.get(r).set(c, -1);
+                        posiciones.get(r - 1).set(c, 0);
+                        neo.moveUp(c, r);
+                        System.out.println("Moviendo hacia arriba");
+
+                        moverAgentes();
+
+                    } else if (posiciones.get(r - 1).get(c) == 1) {
+                        System.out.println("¡Agente atrapó a Neo!");
+                        neo.kill();
+                        for (Agente agente : agentes) {
+                            if (agente.getCol() == c && agente.getRow() == r - 1) {
+                                agente.setWon(true);
+                            }
+                        }
+                    } else if (posiciones.get(r - 1).get(c) == 2) {
+                        System.out.println("¡Neo alcanzó un teléfono y gana!");
+                        for (Telefono telefono : telefonos) {
+                            if (telefono.getCol() == c && telefono.getRow() == r - 1) {
+                                telefono.setIsFull(true);
+                            }
+                        }
                     }
-                } else if (r > 0 && posiciones.get(r - 1).get(c) == 1) {
-                    // para que gane agente comparar agentes por pocisiones y matar neo,
-                    // tambien marcar que agente gana
-                } else if (r > 0 && posiciones.get(r - 1).get(c) == 2) {
-                    // Marcar para que Neo gane y el telefono se llene
+                } else {
+                    System.out.println("Movimiento inválido: Neo no puede salirse del tablero (arriba)");
                 }
-            }
-            if (d == 1) {
-                if (r < tam - 1 && posiciones.get(r + 1).get(c) == -1) {
-                    neo.moveDown(c, r);
-                    posiciones.get(r).set(c, -1);
-                    posiciones.get(r).set(c+1, 0);
-                    for (int i = 0; i < agentes.size(); i++) {
-                        getAgente(i).analizar(c, r);
+            } else if (d == 1) {
+                if (r < tam - 1) {
+                    if (posiciones.get(r + 1).get(c) == -1) {
+                        posiciones.get(r).set(c, -1);
+                        posiciones.get(r + 1).set(c, 0);
+                        neo.moveDown(c, r);
+                        System.out.println("Moviendo hacia abajo");
+
+                        moverAgentes();
+
+                    } else if (posiciones.get(r + 1).get(c) == 1) {
+                        System.out.println("¡Agente atrapó a Neo!");
+                        neo.kill();
+                        for (Agente agente : agentes) {
+                            if (agente.getCol() == c && agente.getRow() == r + 1) {
+                                agente.setWon(true);
+                            }
+                        }
+                    } else if (posiciones.get(r + 1).get(c) == 2) {
+                        System.out.println("¡Neo alcanzó un teléfono y gana!");
+                        for (Telefono telefono : telefonos) {
+                            if (telefono.getCol() == c && telefono.getRow() == r + 1) {
+                                telefono.setIsFull(true);
+                            }
+                        }
                     }
-                } else if (r < tam - 1 && posiciones.get(r + 1).get(c) == 1) {
-                    // para que gane agente comparar agentes por pocisiones y matar neo,
-                    // tambien marcar que agente gana
-                } else if (r < tam - 1 && posiciones.get(r + 1).get(c) == 2) {
-                    // Marcar para que Neo gane y el telefono se llene
+                } else {
+                    System.out.println("Movimiento inválido: Neo no puede salirse del tablero (abajo)");
                 }
-            }
-            if (d == 2) {
-                if (c > 0 && posiciones.get(r).get(c - 1) == -1) {
-                    neo.moveLeft(c, r);
-                    posiciones.get(r).set(c, -1);
-                    posiciones.get(r-1).set(c, 0);
-                    for (int i = 0; i < agentes.size(); i++) {
-                        getAgente(i).analizar(c, r);
+            } else if (d == 2) {
+                if (c > 0) {
+                    if (posiciones.get(r).get(c - 1) == -1) {
+                        posiciones.get(r).set(c, -1);
+                        posiciones.get(r).set(c - 1, 0);
+                        neo.moveLeft(c, r);
+                        System.out.println("Moviendo hacia izquierda");
+
+                        moverAgentes();
+
+                    } else if (posiciones.get(r).get(c - 1) == 1) {
+                        System.out.println("¡Agente atrapó a Neo!");
+                        neo.kill();
+                        for (Agente agente : agentes) {
+                            if (agente.getCol() == c - 1 && agente.getRow() == r) {
+                                agente.setWon(true);
+                            }
+                        }
+                    } else if (posiciones.get(r).get(c - 1) == 2) {
+                        System.out.println("¡Neo alcanzó un teléfono y gana!");
+                        for (Telefono telefono : telefonos) {
+                            if (telefono.getCol() == c - 1 && telefono.getRow() == r) {
+                                telefono.setIsFull(true);
+                            }
+                        }
                     }
-                } else if (c > 0 && posiciones.get(r).get(c - 1) == 1) {
-                    // para que gane agente comparar agentes por pocisiones y matar neo,
-                    // tambien marcar que agente gana
-                } else if (c > 0 && posiciones.get(r).get(c - 1) == 2) {
-                    // Marcar para que Neo gane y el telefono se llene
+                } else {
+                    System.out.println("Movimiento inválido: Neo no puede salirse del tablero (izquierda)");
                 }
-            }
-            if (d == 3) {
-                if (c < tam - 1 && posiciones.get(r).get(c + 1) == -1) {
-                    neo.moveRight(c, r);
-                    posiciones.get(r).set(c, -1);
-                    posiciones.get(r+1).set(c , 0);
-                    for (int i = 0; i < agentes.size(); i++) {
-                        getAgente(i).analizar(c, r);
+            } else if (d == 3) {
+                if (c < tam - 1) {
+                    if (posiciones.get(r).get(c + 1) == -1) {
+                        posiciones.get(r).set(c, -1);
+                        posiciones.get(r).set(c + 1, 0);
+                        neo.moveRight(c, r);
+                        System.out.println("Moviendo hacia derecha");
+
+                        moverAgentes();
+
+                    } else if (posiciones.get(r).get(c + 1) == 1) {
+                        System.out.println("¡Agente atrapó a Neo!");
+                        neo.kill();
+                        for (Agente agente : agentes) {
+                            if (agente.getCol() == c + 1 && agente.getRow() == r) {
+                                agente.setWon(true);
+                            }
+                        }
+                    } else if (posiciones.get(r).get(c + 1) == 2) {
+                        System.out.println("¡Neo alcanzó un teléfono y gana!");
+                        for (Telefono telefono : telefonos) {
+                            if (telefono.getCol() == c + 1 && telefono.getRow() == r) {
+                                telefono.setIsFull(true);
+                            }
+                        }
                     }
-                } else if (c < tam - 1 && posiciones.get(r).get(c + 1) == 1) {
-                    // para que gane agente comparar agentes por pocisiones y matar neo,
-                    // tambien marcar que agente gana
-                } else if (c < tam - 1 && posiciones.get(r).get(c + 1) == 2) {
-                    // Marcar para que Neo gane y el telefono se llene
+                } else {
+                    System.out.println("Movimiento inválido: Neo no puede salirse del tablero (derecha)");
                 }
             }
         }
@@ -233,17 +364,23 @@ public class Tablero {
             if (d >= 0 && d <= 3) {
                 cambiarPos(neo.getCol(), neo.getRow(), d, true);
                 mostrarMatriz(tam);
+
+
+                if (fullTelefono()) {
+                    System.out.println("¡Neo ganó al alcanzar un teléfono!");
+                } else if (agenteHasWon()) {
+                    System.out.println("¡Los agentes ganaron al atrapar a Neo!");
+                }
+
             } else {
                 System.out.println("Dirección no válida. Usa: 0=arriba, 1=abajo, 2=izquierda, 3=derecha");
             }
-
         }
+        sc.close();
     }
 
     public static void main(String[] args) {
         int tam = 8;
         Tablero tablero = new Tablero(tam);
-
     }
-
 }

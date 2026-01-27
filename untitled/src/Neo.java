@@ -27,22 +27,22 @@ public class Neo extends Thread {
     }
 
     public void moveUp(int c, int r) {
-        this.col = c-1;
-        this.row = r;
+        this.row = r - 1;
+        this.col = c;
     }
 
     public void moveDown(int c, int r) {
-        this.col = c+1;
-        this.row = r;
+        this.row = r + 1;
+        this.col = c;
     }
 
     public void moveLeft(int c, int r) {
-        this.col = c;
-        this.row = r-1;
+        this.col = c - 1;
+        this.row = r;
     }
 
     public void moveRight(int c, int r) {
-        this.col = c;
-        this.row = r+1;
+        this.col = c + 1;
+        this.row = r;
     }
 }
