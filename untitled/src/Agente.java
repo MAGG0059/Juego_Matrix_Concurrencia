@@ -33,13 +33,62 @@ public class Agente extends Thread {
         }
     }
 
-    public synchronized int analizar(int neoCol, int neoRow) {
-        if (this.col == neoCol && this.row == neoRow) {
-            this.won = true;
-            return -1;
+    public synchronized void mover(Tablero tablero) {
+        int neoCol = 0;
+        int neoRow = 0;
+
+        Neo neo = tablero.getNeo();
+        if (neo != null) {
+            neoCol = neo.getCol();
+            neoRow = neo.getRow();
         }
 
-        return movimientoGreedy(neoCol, neoRow);
+        if (this.col == neoCol && this.row == neoRow) {
+            this.won = true;
+            neo.kill();
+            return;
+        }
+
+        int direccion = movimientoGreedy(neoCol, neoRow);
+
+        if (direccion != -1) {
+            int nuevaCol = col;
+            int nuevaRow = row;
+
+            if (direccion == 0 && row > 0) {
+                nuevaRow = row - 1;
+            }
+            else if (direccion == 1 && row < tablero.getTam() - 1) {
+                nuevaRow = row + 1;
+            }
+            else if (direccion == 2 && col > 0) {
+                nuevaCol = col - 1;
+            }
+            else if (direccion == 3 && col < tablero.getTam() - 1) {
+                nuevaCol = col + 1;
+            }
+
+            if (nuevaCol != col || nuevaRow != row) {
+                int valorNuevaPos = tablero.getValorCasilla(nuevaRow, nuevaCol);
+
+                if (valorNuevaPos == -1 || (nuevaCol == neoCol && nuevaRow == neoRow)) {
+                    tablero.actualizarPosicion(col, row, nuevaCol, nuevaRow, 1);
+
+                    synchronized(lock) {
+                        this.col = nuevaCol;
+                        this.row = nuevaRow;
+                    }
+
+                    System.out.println("Agente movido de (" + col + "," + row + ") a (" + nuevaCol + "," + nuevaRow + ")");
+
+                    if (nuevaCol == neoCol && nuevaRow == neoRow) {
+                        this.won = true;
+                        neo.kill();
+                        System.out.println("¡Agente atrapó a Neo!");
+                    }
+                }
+            }
+        }
     }
 
     private int movimientoGreedy(int destinoCol, int destinoRow) {
